@@ -1,21 +1,16 @@
 console.log("Spotify Player Started...");
 
-// ===============================
-// Variables
-// ===============================
+// =========================================================================
+// Configuration: Automatically fetches files from your public repository
+// =========================================================================
+const GITHUB_USERNAME = "hamzaahsanhamzaahsan11-lab";
+const REPO_NAME = "soptifi.com";
+const API_URL = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/songs`;
+
+let songs = [];
 let audio = new Audio();
 let currentIndex = 0;
-
-// IMPORTANT: List your exact filenames inside your GitHub "songs" folder
-const songs = [
-    "songs/song(1).mp3",
-    "songs/song(2).mp3",
-    "songs/song(3).mp3"
-    "songs/song(4).mp3"
-    "songs/song(5).mp3"
-    "songs/song(6).mp3"
-    "songs/song(7).mp3"
-];
+let playPromise = null;
 
 const playBtn = document.getElementById("playPause");
 const nextBtn = document.getElementById("next");
@@ -26,8 +21,34 @@ const songTime = document.getElementById("songTime");
 const playbar = document.querySelector(".playbar");
 const container = document.querySelector(".cardContainer");
 
-// Track the current play promise to prevent unhandled interruption errors
-let playPromise = null;
+// ===============================
+// Automatically Fetch & Sort Songs via GitHub API
+// ===============================
+async function getSongs() {
+    try {
+        let response = await fetch(API_URL);
+        if (!response.ok) throw new Error("Could not fetch repository contents");
+        
+        let files = await response.json();
+        let mp3Files = [];
+
+        // Loop through everything in the songs folder
+        files.forEach(file => {
+            if (file.name.endsWith(".mp3")) {
+                mp3Files.push(file.download_url);
+            }
+        });
+
+        // ⚠️ FIX: Sort songs numerically (song1, song2, song3... order mein rahein)
+        mp3Files.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        
+        songs = mp3Files;
+        return songs;
+    } catch (error) {
+        console.error("GitHub API Error: ", error);
+        return [];
+    }
+}
 
 // ===============================
 // Format Time
@@ -40,25 +61,25 @@ function formatTime(seconds) {
 }
 
 // ===============================
-// UI Updates for Play/Pause Buttons
+// Synchronize UI Elements
 // ===============================
-function updateCardUI(playingIndex, isPlaying) {
+function updateUIState(playingIndex, isPlaying) {
     document.querySelectorAll(".song-card").forEach((card, index) => {
-        const playIcon = card.querySelector(".play-icon");
-        if (!playIcon) return;
+        const cardPlayBtn = card.querySelector(".play-icon");
+        if (!cardPlayBtn) return;
 
         if (index === playingIndex && isPlaying) {
-            playIcon.classList.add("playing");
-            playIcon.innerHTML = "❚❚";
+            cardPlayBtn.classList.add("playing");
+            cardPlayBtn.innerHTML = "❚❚";
         } else {
-            playIcon.classList.remove("playing");
-            playIcon.innerHTML = "▶";
+            cardPlayBtn.classList.remove("playing");
+            cardPlayBtn.innerHTML = "▶";
         }
     });
 }
 
 // ===============================
-// Play Song Safely (Handles Promises)
+// Play Song Safely
 // ===============================
 function playSong(index) {
     if (index < 0 || index >= songs.length) return;
@@ -66,70 +87,31 @@ function playSong(index) {
     currentIndex = index;
     audio.src = songs[currentIndex];
     
-    // Catch the promise to handle rapid-click interruptions gracefully
     playPromise = audio.play();
 
     if (playPromise !== undefined) {
         playPromise
             .then(() => {
-                // Playback successfully started
                 playBtn.innerHTML = "⏸";
-                updateCardUI(currentIndex, true);
+                updateUIState(currentIndex, true);
             })
             .catch(error => {
-                // Interruption or autoplay blocking handled safely here
-                console.log("Playback request wrapped safely: ", error.message);
+                console.log("Playback standard catch-wrap:", error.message);
             });
     }
 
     const cards = document.querySelectorAll(".song-card");
     if (cards[currentIndex]) {
         songName.innerText = cards[currentIndex].querySelector("h4").innerText;
-        artistName.innerText = cards[currentIndex].querySelector("p").innerText;
+        artistName.innerText = cards[currentIndex].querySelector("p").innerText || "Unknown Artist";
     }
 }
 
-// ===============================
-// Build UI and Initialize
-// ===============================
-function init() {
-    if (!container) return;
-
-    container.innerHTML = ""; 
-    songs.forEach((song, index) => {
-        let fileName = decodeURIComponent(song.split("/").pop()).replace(".mp3", "");
-        
-        container.innerHTML += `
-            <div class="song-card" data-index="${index}">
-                <img src="cover.jpg" alt="cover">
-                <h4>${fileName}</h4>
-                <p>Unknown Artist</p>
-                <span class="play-icon">▶</span>
-            </div>
-        `;
-    });
-
-    document.querySelectorAll(".song-card").forEach((card) => {
-        card.addEventListener("click", () => {
-            const index = parseInt(card.dataset.index);
-            if (currentIndex === index && !audio.paused) {
-                safePause();
-            } else if (currentIndex === index && audio.paused && audio.src) {
-                playSong(index);
-            } else {
-                playSong(index);
-            }
-        });
-    });
-}
-
-// Helper function to pause only after the audio has finished its initial load promise
 function safePause() {
     if (playPromise !== undefined) {
         playPromise.then(() => {
             audio.pause();
         }).catch(() => {
-            // If the play promise failed/interrupted, force a pause safely
             audio.pause();
         });
     } else {
@@ -137,11 +119,55 @@ function safePause() {
     }
 }
 
-// Run setup
-init();
+// ===============================
+// Build HTML UI Cards & Main Start
+// ===============================
+async function main() {
+    await getSongs();
+
+    if (!container) return;
+    container.innerHTML = "";
+
+    if (songs.length === 0) {
+        container.innerHTML = "<p style='color: white; padding: 20px;'>No .mp3 songs found in your repository's 'songs' folder!</p>";
+        return;
+    }
+
+    // Build the list elements
+    songs.forEach((song, index) => {
+        let fileName = decodeURIComponent(song.split("/").pop().split("?")[0]).replace(".mp3", "");
+        
+        // ⚠️ FIX: Agar cover.jpg nahi hai toh logo.svg show hogi fallback ke taur par
+        container.innerHTML += `
+            <div class="song-card" data-index="${index}">
+                <div class="img-container">
+                    <img src="logo.svg" alt="cover" onerror="this.src='logo.svg'">
+                    <span class="play-icon">▶</span>
+                </div>
+                <h4>${fileName}</h4>
+                <p>Unknown Artist</p>
+            </div>
+        `;
+    });
+
+    // Event listener mapping
+    document.querySelectorAll(".song-card").forEach((card) => {
+        card.addEventListener("click", () => {
+            const index = parseInt(card.dataset.index);
+            if (currentIndex === index && !audio.paused) {
+                safePause();
+            } else {
+                playSong(index);
+            }
+        });
+    });
+}
+
+// Initialize System
+main();
 
 // ===============================
-// Controls: Play / Pause
+// Control Layout Triggers
 // ===============================
 playBtn.addEventListener("click", () => {
     if (!audio.src && songs.length > 0) {
@@ -155,27 +181,18 @@ playBtn.addEventListener("click", () => {
     }
 });
 
-// ===============================
-// Controls: Next
-// ===============================
 nextBtn.addEventListener("click", () => {
     if (songs.length === 0) return;
     currentIndex = (currentIndex + 1) % songs.length;
     playSong(currentIndex);
 });
 
-// ===============================
-// Controls: Previous
-// ===============================
 prevBtn.addEventListener("click", () => {
     if (songs.length === 0) return;
     currentIndex = (currentIndex - 1 + songs.length) % songs.length;
     playSong(currentIndex);
 });
 
-// ===============================
-// Audio Event Listeners
-// ===============================
 audio.addEventListener("timeupdate", () => {
     songTime.innerHTML = formatTime(audio.currentTime) + " / " + formatTime(audio.duration);
 });
@@ -183,18 +200,17 @@ audio.addEventListener("timeupdate", () => {
 audio.addEventListener("play", () => {
     playBtn.innerHTML = "⏸";
     if (playbar) playbar.classList.add("playing");
-    updateCardUI(currentIndex, true);
+    updateUIState(currentIndex, true);
 });
 
 audio.addEventListener("pause", () => {
     playBtn.innerHTML = "▶";
     if (playbar) playbar.classList.remove("playing");
-    updateCardUI(currentIndex, false);
+    updateUIState(currentIndex, false);
 });
 
 audio.addEventListener("ended", () => {
     if (playbar) playbar.classList.remove("playing");
-    updateCardUI(currentIndex, false);
-    // Auto-advance to next song seamlessly
+    updateUIState(currentIndex, false);
     nextBtn.click();
 });
