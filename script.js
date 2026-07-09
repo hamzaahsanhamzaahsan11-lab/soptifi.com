@@ -1,13 +1,24 @@
 console.log("Spotify Player Started...");
 
-// =========================================================================
-// Configuration: Automatically fetches files from your public repository
-// =========================================================================
-const GITHUB_USERNAME = "hamzaahsanhamzaahsan11-lab";
-const REPO_NAME = "soptifi.com";
-const API_URL = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/songs`;
+// ===============================
+// Your Exact Songs Array
+// ===============================
+const songs = [
+    "songs/song(1).mp3",
+    "songs/song(2).mp3",
+    "songs/song(3).mp3",
+    "songs/song(4).mp3",
+    "songs/song(5).mp3",
+    "songs/song(6).mp3",
+    "songs/song(7).mp3",
+    "songs/song(8).mp3",
+    "songs/song(9).mp3",
+    "songs/song(10).mp3",
+    "songs/song(11).mp3",
+    "songs/song(12).mp3",
+    "songs/song(13).mp3"
+];
 
-let songs = [];
 let audio = new Audio();
 let currentIndex = 0;
 let playPromise = null;
@@ -22,35 +33,6 @@ const playbar = document.querySelector(".playbar");
 const container = document.querySelector(".cardContainer");
 
 // ===============================
-// Automatically Fetch & Sort Songs via GitHub API
-// ===============================
-async function getSongs() {
-    try {
-        let response = await fetch(API_URL);
-        if (!response.ok) throw new Error("Could not fetch repository contents");
-        
-        let files = await response.json();
-        let mp3Files = [];
-
-        // Loop through everything in the songs folder
-        files.forEach(file => {
-            if (file.name.endsWith(".mp3")) {
-                mp3Files.push(file.download_url);
-            }
-        });
-
-        // ⚠️ FIX: Sort songs numerically (song1, song2, song3... order mein rahein)
-        mp3Files.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-        
-        songs = mp3Files;
-        return songs;
-    } catch (error) {
-        console.error("GitHub API Error: ", error);
-        return [];
-    }
-}
-
-// ===============================
 // Format Time
 // ===============================
 function formatTime(seconds) {
@@ -61,7 +43,7 @@ function formatTime(seconds) {
 }
 
 // ===============================
-// Synchronize UI Elements
+// Cards aur Icons Update State
 // ===============================
 function updateUIState(playingIndex, isPlaying) {
     document.querySelectorAll(".song-card").forEach((card, index) => {
@@ -79,7 +61,7 @@ function updateUIState(playingIndex, isPlaying) {
 }
 
 // ===============================
-// Play Song Safely
+// Play Song Function
 // ===============================
 function playSong(index) {
     if (index < 0 || index >= songs.length) return;
@@ -96,14 +78,14 @@ function playSong(index) {
                 updateUIState(currentIndex, true);
             })
             .catch(error => {
-                console.log("Playback standard catch-wrap:", error.message);
+                console.log("Playback error caught safely:", error.message);
             });
     }
 
     const cards = document.querySelectorAll(".song-card");
     if (cards[currentIndex]) {
-        songName.innerText = cards[currentIndex].querySelector("h4").innerText;
-        artistName.innerText = cards[currentIndex].querySelector("p").innerText || "Unknown Artist";
+        if (songName) songName.innerText = cards[currentIndex].querySelector("h4").innerText;
+        if (artistName) artistName.innerText = cards[currentIndex].querySelector("p").innerText || "Unknown Artist";
     }
 }
 
@@ -120,26 +102,22 @@ function safePause() {
 }
 
 // ===============================
-// Build HTML UI Cards & Main Start
+// Build Song Cards in HTML
 // ===============================
-async function main() {
-    await getSongs();
-
-    if (!container) return;
-    container.innerHTML = "";
-
-    if (songs.length === 0) {
-        container.innerHTML = "<p style='color: white; padding: 20px;'>No .mp3 songs found in your repository's 'songs' folder!</p>";
+function init() {
+    if (!container) {
+        console.error("Error: .cardContainer element nahi mila HTML mein!");
         return;
     }
+    
+    container.innerHTML = "";
 
-    // Build the list elements
     songs.forEach((song, index) => {
-        let fileName = decodeURIComponent(song.split("/").pop().split("?")[0]).replace(".mp3", "");
+        // Filename nikalne ke liye
+        let fileName = decodeURIComponent(song.split("/").pop()).replace(".mp3", "");
         
-        // ⚠️ FIX: Agar cover.jpg nahi hai toh logo.svg show hogi fallback ke taur par
         container.innerHTML += `
-            <div class="song-card" data-index="${index}">
+            <div class="song-card" data-index="${index}" style="cursor: pointer;">
                 <div class="img-container">
                     <img src="logo.svg" alt="cover" onerror="this.src='logo.svg'">
                     <span class="play-icon">▶</span>
@@ -150,7 +128,7 @@ async function main() {
         `;
     });
 
-    // Event listener mapping
+    // Event Listeners for Cards click
     document.querySelectorAll(".song-card").forEach((card) => {
         card.addEventListener("click", () => {
             const index = parseInt(card.dataset.index);
@@ -163,48 +141,55 @@ async function main() {
     });
 }
 
-// Initialize System
-main();
+// Run Program
+init();
 
 // ===============================
-// Control Layout Triggers
+// Main Control Bar Events
 // ===============================
-playBtn.addEventListener("click", () => {
-    if (!audio.src && songs.length > 0) {
-        playSong(0);
-        return;
-    }
-    if (audio.paused) {
+if (playBtn) {
+    playBtn.addEventListener("click", () => {
+        if (!audio.src && songs.length > 0) {
+            playSong(0);
+            return;
+        }
+        if (audio.paused) {
+            playSong(currentIndex);
+        } else {
+            safePause();
+        }
+    });
+}
+
+if (nextBtn) {
+    nextBtn.addEventListener("click", () => {
+        if (songs.length === 0) return;
+        currentIndex = (currentIndex + 1) % songs.length;
         playSong(currentIndex);
-    } else {
-        safePause();
-    }
-});
+    });
+}
 
-nextBtn.addEventListener("click", () => {
-    if (songs.length === 0) return;
-    currentIndex = (currentIndex + 1) % songs.length;
-    playSong(currentIndex);
-});
+if (prevBtn) {
+    prevBtn.addEventListener("click", () => {
+        if (songs.length === 0) return;
+        currentIndex = (currentIndex - 1 + songs.length) % songs.length;
+        playSong(currentIndex);
+    });
+}
 
-prevBtn.addEventListener("click", () => {
-    if (songs.length === 0) return;
-    currentIndex = (currentIndex - 1 + songs.length) % songs.length;
-    playSong(currentIndex);
-});
-
+// Audio Track Adjustments
 audio.addEventListener("timeupdate", () => {
-    songTime.innerHTML = formatTime(audio.currentTime) + " / " + formatTime(audio.duration);
+    if (songTime) songTime.innerHTML = formatTime(audio.currentTime) + " / " + formatTime(audio.duration);
 });
 
 audio.addEventListener("play", () => {
-    playBtn.innerHTML = "⏸";
+    if (playBtn) playBtn.innerHTML = "⏸";
     if (playbar) playbar.classList.add("playing");
     updateUIState(currentIndex, true);
 });
 
 audio.addEventListener("pause", () => {
-    playBtn.innerHTML = "▶";
+    if (playBtn) playBtn.innerHTML = "▶";
     if (playbar) playbar.classList.remove("playing");
     updateUIState(currentIndex, false);
 });
@@ -212,5 +197,5 @@ audio.addEventListener("pause", () => {
 audio.addEventListener("ended", () => {
     if (playbar) playbar.classList.remove("playing");
     updateUIState(currentIndex, false);
-    nextBtn.click();
+    if (nextBtn) nextBtn.click();
 });
