@@ -1,0 +1,125 @@
+ Spotify Clone - Clean CSS (starter)
+{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:SpotifyMixUI,Helvetica,Arial,sans-serif;
+}
+body{
+    background:#000;
+    color:#fff;
+}
+.nav{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 20px;
+    background:#000;
+}
+.container{
+    display:flex;
+    gap:8px;
+    height:calc(100vh - 68px);
+    padding:8px;
+}
+.left{
+    width:35%;
+    background:#121212;
+    border-radius:10px;
+    overflow:auto;
+}
+.right-border{
+    width:65%;
+    background:#121212;
+    border-radius:10px;
+    position:relative;
+    overflow-y:auto;
+}
+.side-nav{
+    position:sticky;
+    top:0;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:15px;
+    background:#121212;
+}
+.contaner{
+    margin:12px;
+    padding:18px;
+    background:#1f1f1f;
+    border-radius:10px;
+}
+.create,.create2,.login-btn{
+    border:none;
+    border-radius:999px;
+    cursor:pointer;
+}
+.card-contaner{
+    width:100%;
+    padding:20px;
+}
+.trending{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:15px;
+}
+.cards{
+    display:flex;
+    gap:20px;
+    overflow-x:auto;
+    scrollbar-width:none;
+}
+.cards::-webkit-scrollbar{display:none;}
+.card{
+    flex:0 0 180px;
+    width:180px;
+    min-height:270px;
+    background:#181818;
+    border-radius:8px;
+    padding:10px;
+    position:relative;
+    transition:.3s;
+}
+.card:hover{background:#242424;}
+.card img{
+    width:100%;
+    border-radius:8px;
+}
+.card h2{
+    font-size:16px;
+    margin:10px 0 6px;
+}
+.card p{
+    color:#b3b3b3;
+    font-size:14px;
+}
+.play button{
+    position:absolute;
+    right:15px;
+    bottom:70px;
+    width:46px;
+    height:46px;
+    border:none;
+    border-radius:50%;
+    background:#1db954;
+    opacity:0;
+    transition:.3s;
+}
+.card:hover .play button{
+    opacity:1;
+    transform:translateY(-5px);
+}
+.playbar{
+    position:sticky;
+    bottom:0;
+    width:100%;
+    height:75px;
+    background:#1db954;
+    color:#000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+}
